@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <link rel="shortcut icon" type="imagex/png" href="https://png.pngtree.com/png-clipart/20230504/original/pngtree-location-point-icon-on-map-png-image_9138909.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informações do IP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 800px; /* Increased width */
+            max-width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #info {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            display: none;
+            margin-top: 20px;
+            text-align: left;
+            line-height: 1.6;
+        }
+
+        p {
+            margin: 10px 0;
+        }
+
+        strong {
+            color: #555;
+        }
+
+        .loading {
+            color: #888;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .separator {
+            height: 1px;
+            background: #ddd;
+            margin: 20px 0;
+        }
+
+        /* Map container styling */
+        #map {
+            height: 400px; /* Adjust height as needed */
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Informações do IP</h1>
+        <div class="separator"></div>
+        <button id="fetchInfoBtn">Mostrar Informações</button>
+        <button id="copyInfoBtn" class="hidden">Copiar</button>
+        <button id="downloadInfoBtn" class="hidden">Baixar</button>
+        <div id="info">
+            <p><strong>Seu IP:</strong> <span id="ip" class="loading">Carregando...</span></p>
+            <p><strong>Localização:</strong> <span id="location" class="loading">Carregando...</span></p>
+            <p><strong>Latitude:</strong> <span id="latitude" class="loading">Carregando...</span></p>
+            <p><strong>Longitude:</strong> <span id="longitude" class="loading">Carregando...</span></p>
+            <div id="map"></div> <!-- Map container -->
+        </div>
+    </div>
+
+    <!-- Load Google Maps API -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap"></script>
+
+    <script>
+        let map;
+
+        function initMap() {
+            // Initialize the map with default settings
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 4,
+                center: { lat: -15, lng: -60 } // Default center
+            });
+        }
+
+        document.getElementById('fetchInfoBtn').addEventListener('click', () => {
+            const button = document.getElementById('fetchInfoBtn');
+            const infoSection = document.getElementById('info');
+            const copyButton = document.getElementById('copyInfoBtn');
+            const downloadButton = document.getElementById('downloadInfoBtn');
+
+            if (infoSection.style.display === 'none' || infoSection.style.display === '') {
+                // Show the info section and change button text
+                infoSection.style.display = 'block';
+                button.textContent = 'Recarregar Informações';
+                copyButton.classList.remove('hidden');
+                downloadButton.classList.remove('hidden');
+                
+                // Fetch and display the information
+                fetchInformation();
+            } else {
+                // Clear previous data and show loading state
+                document.getElementById('ip').textContent = 'Carregando...';
+                document.getElementById('location').textContent = 'Carregando...';
+                document.getElementById('latitude').textContent = 'Carregando...';
+                document.getElementById('longitude').textContent = 'Carregando...';
+                
+                // Fetch and update the information again
+                fetchInformation();
+            }
+        });
+
+        function fetchInformation() {
+            // Get the visitor's IP address
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => {
+                    const ip = data.ip;
+                    document.getElementById('ip').textContent = ip;
+
+                    // Fetch location information using the IP
+                    return fetch(`https://ipapi.co/${ip}/json/`);
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('location').textContent = `${data.city}, ${data.region}, ${data.country_name}`;
+                    document.getElementById('latitude').textContent = data.latitude;
+                    document.getElementById('longitude').textContent = data.longitude;
+
+                    // Initialize and update the map with the location
+                    const lat = parseFloat(data.latitude);
+                    const lng = parseFloat(data.longitude);
+                    const location = { lat, lng };
+
+                    // Update the map with the new location
+                    map.setCenter(location);
+                    new google.maps.Marker({
+                        position: location,
+                        map: map,
+                        title: 'Sua Localização'
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching IP information:', error);
+                    document.getElementById('ip').textContent = 'Erro ao carregar IP';
+                    document.getElementById('location').textContent = 'Erro ao carregar localização';
+                    document.getElementById('latitude').textContent = 'N/A';
+                    document.getElementById('longitude').textContent = 'N/A';
+                });
+        }
+
+        document.getElementById('copyInfoBtn').addEventListener('click', () => {
+            const ip = document.getElementById('ip').textContent;
+            const location = document.getElementById('location').textContent;
+            const latitude = document.getElementById('latitude').textContent;
+            const longitude = document.getElementById('longitude').textContent;
+
+            const text = `IP: ${ip}\nLocalização: ${location}\nLatitude: ${latitude}\nLongitude: ${longitude}`;
+            
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    alert('Informações copiadas para a Área de Transferência!');
+                })
+                .catch(err => {
+                    console.error('Erro ao copiar informações: ', err);
+                });
+        });
+
+        document.getElementById('downloadInfoBtn').addEventListener('click', () => {
+            const ip = document.getElementById('ip').textContent;
+            const location = document.getElementById('location').textContent;
+            const latitude = document.getElementById('latitude').textContent;
+            const longitude = document.getElementById('longitude').textContent;
+
+            const text = `IP: ${ip}\nLocalização: ${location}\nLatitude: ${latitude}\nLongitude: ${longitude}`;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'informacoes_ip.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+
+<script>
+    if (document.addEventListener) {
+        document.addEventListener("contextmenu", function(e) {
+            e.preventDefault();
+            return false;
+        });
+    } else { //Versões antigas do IE
+        document.attachEvent("oncontextmenu", function(e) {
+            e = e || window.event;
+            e.returnValue = false;
+            return false;
+        });
+    }
+    </script>
+
+<style>
+    /*desabilita a seleção no body*/
+    body {
+        -webkit-touch-callout: none; /* iOS Safari */
+          -webkit-user-select: none; /* Chrome/Safari/Opera */
+           -khtml-user-select: none; /* Konqueror */
+             -moz-user-select: none; /* Firefox */
+              -ms-user-select: none; /* Internet Explorer/Edge */
+                  user-select: none;
+    }
+    
+    /*habilita a seleção nos campos editaveis*/
+    input, textarea {
+        -webkit-touch-callout: initial; /* iOS Safari */
+          -webkit-user-select: text; /* Chrome/Safari/Opera */
+           -khtml-user-select: text; /* Konqueror */
+             -moz-user-select: text; /* Firefox */
+              -ms-user-select: text; /* Internet Explorer/Edge */
+                  user-select: text;
+    }
+    
+    /*habilita a seleção nos campos com o atributo contenteditable*/
+    [contenteditable=true] {
+        -webkit-touch-callout: initial; /* iOS Safari */
+          -webkit-user-select: all; /* Chrome/Safari/Opera */
+           -khtml-user-select: all; /* Konqueror */
+             -moz-user-select: all; /* Firefox */
+              -ms-user-select: all; /* Internet Explorer/Edge */
+                  user-select: all;
+    }
+    </style>
+        
+        <script>
+            if (document.addEventListener) {
+                document.addEventListener("keydown", bloquearSource);
+            } else { //Versões antigas do IE
+                document.attachEvent("onkeydown", bloquearSource);
+            }
+            
+            function bloquearSource(e) {
+                e = e || window.event;
+            
+                var code = e.which || e.keyCode;
+            
+                if (
+                    e.ctrlKey &&
+                    (code == 83 || code == 85) //83 = S, 85 = U
+                ) {
+                    if (e.preventDefault) {
+                        e.preventDefault();
+                    } else {
+                        e.returnValue = false;
+                    }
+            
+                    return false;
+                }
+            }
+            </script>
+            
+
+</body>
+</html>
